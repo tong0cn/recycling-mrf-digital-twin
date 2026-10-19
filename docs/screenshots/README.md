@@ -4,7 +4,7 @@
 
 ## 采集方式
 
-- 被测页面：`npm run build` 后 `npm run preview -- --host 127.0.0.1 --port 5202 --strictPort`（生产构建，非 dev 服务）
+- 被测页面：`npm run build` 后 `npm run preview -- --host 127.0.0.1 --port 5202 --strictPort`（生产构建，非 dev 服务）；`live-*.png` 两张改测 GitHub Pages 线上地址以验证部署链路
 - 浏览器：Chromium（`agent-browser` 0.25.3，headless，经 CDP 控制），视口 `1440×900`（桌面）与 `390×844`（窄屏）
 - 全部画面为程序化几何 + 运行时 Canvas2D 贴图的实时 WebGL 渲染；网络请求只有同源 3 条（文档、JS、CSS），页面不加载任何外部字体、贴图或 CDN 资源
 - 渲染是确定性的：同一构建、同一视口重新截图与上一版**逐字节相同**
@@ -22,5 +22,7 @@
 | `desktop-06-enclosed.png` | 1440×900 | 37.8 s | 俯瞰机位下切到屋顶实体：彩钢瓦墙板、屋面压型接缝与长边厂牌；此模式下隐藏悬浮标签 |
 | `narrow-01-initial.png` | 390×844 | 0.0 s（暂停） | 窄屏首屏：三块纵向堆叠，操作提示与材质图例分两行，竖屏机位已拉远、整块沙盘入画 |
 | `narrow-02-panel.png` | 390×844 | 0.0 s（滚到底） | 窄屏滚到底：料仓水位、搬运任务、近 7 日进出货量与「演示数据」边界说明 |
+| `live-01-deployed.png` | 1440×900 | 0.0 s（暂停） | GitHub Pages 线上首帧（`https://yuhaoxiong.github.io/recycling-mrf-digital-twin/`）：与 `desktop-01-initial.png` 逐字节相同 |
+| `live-02-running.png` | 1440×900 | 约 7 s | 线上点「继续」后：验证部署环境的播放、相机与仿真时钟均正常 |
 
 > 截图仅用于人眼核对，不参与任何自动化测试；`docs/VALIDATION.md` 记录当时观察到的问题、修复项与仍未验证的部分。

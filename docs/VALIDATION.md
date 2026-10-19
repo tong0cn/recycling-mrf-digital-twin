@@ -237,6 +237,31 @@
 
 另外把「跟随选中设备」的取景窗口从 1.8 s 延到 3 s，抵消 OrbitControls 阻尼残留在窗口结束后继续推动相机的问题。
 
+## 独立仓库与 GitHub Pages 部署（2026-10-19）
+
+本项目从合集仓库的子目录**单独立项**：代码、发布产物与在线站点都独立于 `ai-demo`，同时 `ai-demo` 里的工作副本保留，首页卡片与 publication 测试继续联动。
+
+- 仓库：[github.com/yuhaoxiong/recycling-mrf-digital-twin](https://github.com/yuhaoxiong/recycling-mrf-digital-twin)（Public，默认分支 `main`）
+- 站点：<https://yuhaoxiong.github.io/recycling-mrf-digital-twin/>（Pages 的 `build_type=workflow`，强制 HTTPS）
+
+**做法与踩到的坑**
+
+1. `vite.config.ts` 早就写着 `base: './'`，所以同一份 `dist/` 既能挂在合集站点的 `/ai-demo/recycling-mrf-digital-twin/dist/` 子路径下，也能直接作为独立站点的根路径——这次没有改构建配置，只在 README 里补了说明。
+2. 仓库内 `git init -b main`，作者身份用 GitHub noreply 邮箱。`.gitattributes` 固定 `* text=auto eol=lf`：本机 `core.autocrlf=true`，若不固定，工作区 LF 与索引里的 LF 会被反复判成「已修改」。`.gitignore` 忽略 `node_modules`/`*.tsbuildinfo`，但**保留 `dist/` 提交**——合集侧的内联预览与离线分发都依赖它，CI 另出一份干净构建用于发布。
+3. 工作流 `.github/workflows/deploy.yml`：`checkout → setup-node 22（npm cache）→ npm ci → npm run build → npm test → configure-pages → upload-pages-artifact(dist) → deploy-pages`。**顺序必须是「先 build 再 test」**：`tests/dist.test.ts` 那 5 条「发布产物自包含」断言在 `dist/` 缺失时会被 `skipIf` 静默跳过（这是早前评审已经点出的问题），先构建才能让它们在 CI 里真正执行。
+4. **Pages 要先启用再 push**：`configure-pages` 在 Pages 站点尚未创建时会直接失败。顺序改为「建空仓库 → `POST /repos/{owner}/{repo}/pages -f build_type=workflow` → 再 push」。
+5. 两个纯环境坑：Git Bash 下 `gh api /repos/...` 的前导斜杠会被改写成 `C:/Program Files/Git/repos/...`（端点参数去掉前导斜杠即可）；`agent-browser set viewport` 必须在 `open` 之后执行，否则整个命令挂住直到超时。
+6. 首发那次 Actions 全绿但带 `Node.js 20 is deprecated` 告警（`checkout@v4` 等被强制跑在 Node 24 上）。已升级到 `checkout@v7` / `setup-node@v7` / `configure-pages@v6` / `upload-pages-artifact@v5` / `deploy-pages@v5` 并重跑验证，告警消失，只剩一条 `ubuntu-latest` 将于 2026-10-19 迁移到 Ubuntu 26 的提示。
+
+**结果**
+
+- 两次运行全绿：`39211797350`（首版，构建 27 s + 发布 12 s）、`39211906915`（升级 action 后，构建 37 s + 发布 8 s）。
+- `curl` 线上：文档 200 / 960 B，`assets/index-rcjUfvH1.js` 200 / 1342383 B，`assets/index-D6dRfcgS.css` 200 / 11026 B。
+- 浏览器实测（`agent-browser --session mrf-live`，1440×900）：页面错误 0、控制台 0、同源请求 3 条全 200、无外部主机、favicon 无 404（是内联 SVG data URI）；`document.title` 与 `canvas` 存在；点「继续」后时钟推进到 7.3 s / 130。
+- **线上首帧与本地 `desktop-01-initial.png` 逐字节相同**（md5 `7b73ea3ca67e571e375cee2dec4439f1`），说明部署链路没有引入任何差异。
+
+**这条链路没做的事**：没有加自定义域名、没有上 CDN 或缓存策略（`index.html` 靠 GitHub Pages 默认的短缓存，`assets/` 是内容哈希文件名，天然可长缓存）、没有配 `404.html`（单页无路由，不需要）、没有做真实服务器（nginx/Docker）的部署脚本——若以后要迁到自有服务器，`dist/` 三个文件直接指向静态目录即可，注意 `try_files $uri /index.html` 与不要用 `file://` 打开。
+
 ## 未验证项
 
 - 跨浏览器矩阵（Safari / Firefox）与真实触控手势未测；帧率是在 headless Chromium（ANGLE D3D11 / RTX 4070 Laptop）上测的，rAF 不受 vsync 限制，**122–151 FPS 是渲染上限而非屏幕刷新率，不能外推**到真机；显存占用与低端设备表现未测。
