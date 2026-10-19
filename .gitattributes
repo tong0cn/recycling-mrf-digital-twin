@@ -1,0 +1,14 @@
+# 统一按 LF 存库、按 LF 检出：避免 Windows（core.autocrlf=true）下
+# 工作区 CRLF 与索引 LF 反复互相判为「已修改」。
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# 构建产物是压缩后的单行 JS/CSS，不做任何文本处理
+dist/assets/* -text

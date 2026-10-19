@@ -1,0 +1,12 @@
+node_modules
+*.local
+*.log
+.vite
+.DS_Store
+
+# TypeScript 增量编译缓存（tsc -b 产生）
+*.tsbuildinfo
+
+# 注意：dist/ 是刻意提交的静态产物。
+# GitHub Actions 会用一次干净构建另出一份用于 Pages 发布，
+# 仓库里的 dist/ 供合集仓库 ai-demo 内联预览与离线分发使用。
