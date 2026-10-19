@@ -239,15 +239,15 @@
 
 ## 独立仓库与 GitHub Pages 部署（2026-10-19）
 
-本项目从合集仓库的子目录**单独立项**：代码、发布产物与在线站点都独立于 `ai-demo`，同时 `ai-demo` 里的工作副本保留，首页卡片与 publication 测试继续联动。
+本项目原先作为合集仓库 `ai-demo` 的子目录开发，2026-10-19 **单独立项并物理搬出**：本机工作副本现在位于 `C:/01_work/02_program/recycling-mrf-digital-twin`，与 `ai-demo` 目录同级、互不包含；代码、发布产物与在线站点都只在这一处维护。
 
 - 仓库：[github.com/yuhaoxiong/recycling-mrf-digital-twin](https://github.com/yuhaoxiong/recycling-mrf-digital-twin)（Public，默认分支 `main`）
 - 站点：<https://yuhaoxiong.github.io/recycling-mrf-digital-twin/>（Pages 的 `build_type=workflow`，强制 HTTPS）
 
 **做法与踩到的坑**
 
-1. `vite.config.ts` 早就写着 `base: './'`，所以同一份 `dist/` 既能挂在合集站点的 `/ai-demo/recycling-mrf-digital-twin/dist/` 子路径下，也能直接作为独立站点的根路径——这次没有改构建配置，只在 README 里补了说明。
-2. 仓库内 `git init -b main`，作者身份用 GitHub noreply 邮箱。`.gitattributes` 固定 `* text=auto eol=lf`：本机 `core.autocrlf=true`，若不固定，工作区 LF 与索引里的 LF 会被反复判成「已修改」。`.gitignore` 忽略 `node_modules`/`*.tsbuildinfo`，但**保留 `dist/` 提交**——合集侧的内联预览与离线分发都依赖它，CI 另出一份干净构建用于发布。
+1. `vite.config.ts` 早就写着 `base: './'`，所以同一份 `dist/` 既能挂在任意静态站点的子路径下，也能直接作为站点根路径——这次没有改构建配置，只在 README 里补了说明。
+2. 仓库内 `git init -b main`，作者身份用 GitHub noreply 邮箱。`.gitattributes` 固定 `* text=auto eol=lf`：本机 `core.autocrlf=true`，若不固定，工作区 LF 与索引里的 LF 会被反复判成「已修改」。`.gitignore` 忽略 `node_modules`/`*.tsbuildinfo`，但**保留 `dist/` 提交**——离线分发与直接静态托管都依赖它，CI 另出一份干净构建用于发布。
 3. 工作流 `.github/workflows/deploy.yml`：`checkout → setup-node 22（npm cache）→ npm ci → npm run build → npm test → configure-pages → upload-pages-artifact(dist) → deploy-pages`。**顺序必须是「先 build 再 test」**：`tests/dist.test.ts` 那 5 条「发布产物自包含」断言在 `dist/` 缺失时会被 `skipIf` 静默跳过（这是早前评审已经点出的问题），先构建才能让它们在 CI 里真正执行。
 4. **Pages 要先启用再 push**：`configure-pages` 在 Pages 站点尚未创建时会直接失败。顺序改为「建空仓库 → `POST /repos/{owner}/{repo}/pages -f build_type=workflow` → 再 push」。
 5. 两个纯环境坑：Git Bash 下 `gh api /repos/...` 的前导斜杠会被改写成 `C:/Program Files/Git/repos/...`（端点参数去掉前导斜杠即可）；`agent-browser set viewport` 必须在 `open` 之后执行，否则整个命令挂住直到超时。
@@ -275,9 +275,9 @@
 - `tests/recycling-mrf-publication.test.mjs`：删除（它的 4 条断言只服务于合集内那份副本）。
 - `tests/modular-fire-publication.test.mjs`：还原成原来的硬编码列表版本。
 - `docs/github-entry-verification.md`、`package-lock.json`：一并还原。
-- 合集仓库根 `.gitignore` 新增 `/recycling-mrf-digital-twin/`，并在注释里写明它已单独立项与独立仓库地址——本机目录仍留在 `ai-demo/` 下当工作副本，但合集仓库从此看不见它。
+- 合集仓库根 `.gitignore`：脱钩当时新增过 `/recycling-mrf-digital-twin/` 用来屏蔽工作副本；随后按用户要求把目录**物理搬到 `C:/01_work/02_program/recycling-mrf-digital-twin`**，目录已不在 `ai-demo` 里，这条 ignore 规则也就没有意义，随之还原。
 
-结果：合集根 `npm test` 从 203 项降到 **199 项，fail 0**（正好少掉那 4 条 MRF 断言），`git status` 只剩 `.gitignore` 一处改动。
+结果：合集根 `npm test` 从 203 项降到 **199 项，fail 0**（正好少掉那 4 条 MRF 断言）；`.gitignore` 还原后 `ai-demo` 工作区**与 origin/main 完全一致，零待提交改动**。搬出后本项目自带 `.git`，是独立仓库，与合集没有任何目录或 Git 层面的联系。
 
 ### 2. 默认视角改为自由视角
 
