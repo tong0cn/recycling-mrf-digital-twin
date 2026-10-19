@@ -2,7 +2,7 @@
 
 面向客户交流的可回收物分拣中心三维数字孪生：一座完整厂房、两条分拣线、四类可回收物、进出货双向物流，以及按约 130 秒班次无缝循环的全流程动画。设备可点选查看状态与读数，参数干预默认关闭、开启后真实改变仿真结果。
 
-[在线演示（GitHub Pages）](https://yuhaoxiong.github.io/recycling-mrf-digital-twin/) · [合集内预览](https://fanhuayishiy.github.io/ai-demo/recycling-mrf-digital-twin/dist/) · [完整复现提示](./docs/RECREATE_PROMPT.zh-CN.md) · [发布验证记录](./docs/VALIDATION.md)
+[在线演示（GitHub Pages）](https://yuhaoxiong.github.io/recycling-mrf-digital-twin/)  · [完整复现提示](./docs/RECREATE_PROMPT.zh-CN.md) · [发布验证记录](./docs/VALIDATION.md)
 
 **这是面向客户的概念演示，不是分选设备的控制或监控系统。** 所有产能、识别率、节拍、吨位都是演示设定；光学分选与高光谱识别不接真实传感器、模型或 PLC / MES / WMS / 称重系统；机械臂抓取是动画概念，不是运动学或抓取力学仿真；叉车按预设航点行驶，没有自动调度、实时避障或碰撞物理。
 
