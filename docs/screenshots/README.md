@@ -22,7 +22,7 @@
 | `desktop-06-enclosed.png` | 1440×900 | 37.8 s | 俯瞰机位下切到屋顶实体：彩钢瓦墙板、屋面压型接缝与长边厂牌；此模式下隐藏悬浮标签 |
 | `narrow-01-initial.png` | 390×844 | 0.0 s（暂停） | 窄屏首屏（默认自由视角）：三块纵向堆叠，操作提示与材质图例分两行，竖屏机位按宽高比拉远、整块沙盘入画 |
 | `narrow-02-panel.png` | 390×844 | 0.0 s（滚到底） | 窄屏滚到底：料仓水位、搬运任务、近 7 日进出货量与「演示数据」边界说明 |
-| `live-01-deployed.png` | 1440×900 | 0.0 s（暂停） | GitHub Pages 线上首帧（`https://yuhaoxiong.github.io/recycling-mrf-digital-twin/`）：与 `desktop-01-initial.png` 逐字节相同 |
+| `live-01-deployed.png` | 1440×900 | 0.0 s（暂停） | GitHub Pages 线上首帧（`https://yuhaoxiong.github.io/recycling-mrf-digital-twin/`）：默认自由视角，与 `desktop-01-initial.png` 逐字节相同（md5 `8f36763e…`） |
 | `live-02-running.png` | 1440×900 | 约 7 s | 线上点「继续」后：验证部署环境的播放、相机与仿真时钟均正常 |
 
 > 截图仅用于人眼核对，不参与任何自动化测试；`docs/VALIDATION.md` 记录当时观察到的问题、修复项与仍未验证的部分。

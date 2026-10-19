@@ -300,6 +300,15 @@
 
 同时重拍了两张基线截图：`desktop-01-initial.png`（md5 `8f36763e8e3a015d6f940c0e385fdd71`）、`narrow-01-initial.png`（md5 `aa325b10f8e0137b33d041fa071b097d`）。
 
+### 3. 重新部署与线上复验
+
+推送后 GitHub Actions 运行 `39217643319` 全绿（构建 + 测试 + 发布）。线上复验：
+
+- `index.html` 已引用新构建 `assets/index-oPBwMOQ2.js`（200 / 1342380 B），CSS 未变（`index-D6dRfcgS.css`）。
+- 线上页面错误 0、控制台 0、同源请求 3 条全 200（文档 / JS / CSS），无外部主机。
+- 相机按钮组状态为 `俯瞰全厂:false / 跟随选中设备:false / 自由视角:true`——**默认确实是自由视角**；`document.title` 与 `canvas` 正常。
+- 线上首帧截图 md5 `8f36763e8e3a015d6f940c0e385fdd71`，与本地 `desktop-01-initial.png` **逐字节相同**，部署链路无差异。
+
 ## 未验证项
 
 - 跨浏览器矩阵（Safari / Firefox）与真实触控手势未测；帧率是在 headless Chromium（ANGLE D3D11 / RTX 4070 Laptop）上测的，rAF 不受 vsync 限制，**122–151 FPS 是渲染上限而非屏幕刷新率，不能外推**到真机；显存占用与低端设备表现未测。
