@@ -46,6 +46,7 @@
 - **异常演示**：光选误判、料仓满溢预警（把报警线提前一包）、紧急停机三个开关，可一键演示异常与恢复；开关在暂停状态下也会立即反映到状态与报警上。
 - **生产看板**：顶栏给出当日进料 / 出货量、回收率、运行设备数与班次进度；右侧看板给出分品类进出存、料仓水位条（含阈值与预警线刻度）、本班次打包数与叉车趟数、搬运任务列表、转入杂项的尾料包数、丢失计数（应恒为 0），以及近 7 日进出货趋势（演示数据）。
 - **时间轴**：约 130 秒一个班次无缝循环，可拖动到任意时刻、可 1/2/4 倍速、可暂停复位，八个里程碑（进货车辆入场 / 塑料来料上线 / 首次光选分选 / 纺织来料上线 / 首件打包 / 首件成品装车 / 转运车离场 / 出货过磅）可直接点击跳转到该时刻；后台标签页不推进也不补算；系统偏好「减少动态效果」时默认暂停。
+- **相机**：默认「自由视角」，打开即可拖动旋转、滚轮缩放（竖屏会按宽高比自动拉远，整块沙盘入画）；「俯瞰全厂」一键回到标准机位，「跟随选中设备」把机位推到所选设备近景。三种视角可随时切换，自由视角下不抢用户的镜头。
 - **响应式**：宽屏三栏并排（设备列表 / 场景与时间轴 / 详情与看板）；≤1180 px 时右侧面板移到场景下方；≤820 px 时三块纵向堆叠、由页面统一滚动。里程碑标签会按导轨实际宽度自动错行，相机按钮浮在画布左下角，任何宽度下都不会出现按钮压时间轴或标签互相压字。
 
 ## 运行方式
@@ -66,15 +67,15 @@ npm run build   # tsc -b && vite build → dist/
 npm run preview -- --host 127.0.0.1 --port 5200 --strictPort
 ```
 
-`dist/` 是已提交的静态产物，使用相对 Vite base（`base: './'`），因此既能挂在合集仓库的 `/ai-demo/recycling-mrf-digital-twin/dist/` 子路径下，也能直接作为独立站点的根路径。合集首页把本项目列在最后，推送后由 ai-demo 的现有工作流打包。
+`dist/` 是已提交的静态产物，使用相对 Vite base（`base: './'`），可以直接作为独立站点的根路径，也能挂到任意子路径下（例如放在另一个静态服务的子目录里）。
 
 ## 独立仓库与部署
 
-本项目同时托管在两个位置，内容保持一致：
+本项目是独立仓库，源码、发布产物与在线站点都只在自己这一处维护，不再挂在任何合集仓库里：
 
 | 位置 | 地址 | 用途 |
 | --- | --- | --- |
-| 独立仓库 | [github.com/yuhaoxiong/recycling-mrf-digital-twin](https://github.com/yuhaoxiong/recycling-mrf-digital-twin) | 单独立项、对外演示 |
+| 仓库 | [github.com/yuhaoxiong/recycling-mrf-digital-twin](https://github.com/yuhaoxiong/recycling-mrf-digital-twin) | 源码与发布产物 |
 | 在线站点 | [yuhaoxiong.github.io/recycling-mrf-digital-twin](https://yuhaoxiong.github.io/recycling-mrf-digital-twin/) | 免安装、点开即看（GitHub Pages，HTTPS） |
 
 发布方式是 GitHub Actions，工作流在 `.github/workflows/deploy.yml`：推到 `main` 后自动 `npm ci` → `npm run build` → `npm test` → 上传 `dist/` → 发布到 Pages。**先构建再测试**，是为了让 `tests/dist.test.ts` 那组「发布产物自包含」断言真正执行——缺 `dist/` 时它们会被静默跳过。
@@ -82,7 +83,7 @@ npm run preview -- --host 127.0.0.1 --port 5200 --strictPort
 只想发到自己的服务器时，不需要 Actions：`npm run build` 产物就是 `dist/` 三个文件，用任意静态服务器指向它即可（nginx 需要 `try_files $uri $uri/ /index.html;`）。不要用 `file://` 直接双击 `dist/index.html`，ES module 需要 HTTP。
 
 
-操作：拖动旋转、滚轮缩放、点击设备查看状态；快捷键 `空格` 播放/暂停、`1/2/4` 切换倍速、`R` 复位、`Esc` 取消选中。
+操作：**打开即为「自由视角」**，鼠标左键拖动旋转、滚轮缩放即可绕着厂房看；点「俯瞰全厂」回到标准机位，选中设备后可点「跟随选中设备」推到近景。点击设备查看状态；快捷键 `空格` 播放/暂停、`1/2/4` 切换倍速、`R` 复位、`Esc` 取消选中。
 
 ## 技术栈
 

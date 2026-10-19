@@ -35,7 +35,9 @@ export default function App() {
   const [speed, setSpeed] = useState(1);
   const [selected, setSelected] = useState<DeviceId | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('xray');
-  const [cameraMode, setCameraMode] = useState<CameraMode>('overview');
+  // 默认「自由视角」：打开即可用鼠标拖动旋转、滚轮缩放，便于临场讲解时绕着厂房看。
+  // 想看回标准机位点「俯瞰全厂」；选中设备后可点「跟随选中设备」推到近景。
+  const [cameraMode, setCameraMode] = useState<CameraMode>('free');
   const [interventionMode, setInterventionMode] = useState(false);
   const [query, setQuery] = useState('');
   const [reducedMotion, setReducedMotion] = useState(false);

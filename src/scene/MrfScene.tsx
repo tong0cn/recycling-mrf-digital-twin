@@ -47,6 +47,8 @@ class SceneBoundary extends Component<{ children: ReactNode; onError: () => void
 }
 
 const OVERVIEW_POSITION = new Vector3(37, 32, 43);
+/** 全厂取景的视点（厂房中心略向南偏，园区前场也算画面的一部分）。 */
+const OVERVIEW_TARGET: [number, number, number] = [0, 0.4, -3.2];
 
 interface RigProps {
   target: [number, number, number];
@@ -73,7 +75,15 @@ function CameraRig({ target, pull, cameraMode }: RigProps) {
   useFrame((_, delta) => {
     const control = controls.current;
     if (!control) return;
+    // 竖屏（手机）下按宽高比把机位整体拉远。这一步放在自由视角提前返回之前：
+    // 默认视角就是自由视角，如果只在俯瞰/跟随时才拉远，手机首次打开会把厂房右侧切掉。
+    if (Math.abs(appliedFit.current - fit) > 0.01) {
+      const view = camera.position.clone().sub(control.target);
+      camera.position.copy(control.target).add(view.setLength(view.length() * (fit / appliedFit.current)));
+      appliedFit.current = fit;
+    }
     if (cameraMode === 'free') {
+      // 自由视角的机位与视点完全交给 OrbitControls（用户拖拽/缩放），这里什么都不改。
       prevMode.current = cameraMode;
       return;
     }
@@ -102,11 +112,6 @@ function CameraRig({ target, pull, cameraMode }: RigProps) {
       offset.current.set(FOCUS_OFFSET.x * signX, FOCUS_OFFSET.y, FOCUS_OFFSET.z * signZ);
       camera.position.lerp(desired.current.clone().add(offset.current), 0.07);
     }
-    if (Math.abs(appliedFit.current - fit) > 0.01) {
-      const view = camera.position.clone().sub(control.target);
-      camera.position.copy(control.target).add(view.setLength(view.length() * (fit / appliedFit.current)));
-      appliedFit.current = fit;
-    }
     control.update();
   });
 
@@ -118,7 +123,7 @@ function CameraRig({ target, pull, cameraMode }: RigProps) {
       minDistance={7}
       maxDistance={80}
       maxPolarAngle={Math.PI / 2.2}
-      target={[0, 0, 0]}
+      target={OVERVIEW_TARGET}
     />
   );
 }
@@ -127,7 +132,8 @@ function SceneContents({ selected, onSelect, viewMode, cameraMode, reducedMotion
   const simulation = useSimulation();
   const state = simulation.current;
   // 取景中心略向南偏：园区前场（货车停靠与地磅）也算画面的一部分，但主体仍是厂房。
-  const target: [number, number, number] = selected ? DEVICE_ANCHORS[selected] : [0, 0.4, -3.2];
+  const target: [number, number, number] = selected ? DEVICE_ANCHORS[selected] : OVERVIEW_TARGET;
+
 
   return (
     <>

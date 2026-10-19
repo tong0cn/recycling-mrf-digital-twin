@@ -262,6 +262,44 @@
 
 **这条链路没做的事**：没有加自定义域名、没有上 CDN 或缓存策略（`index.html` 靠 GitHub Pages 默认的短缓存，`assets/` 是内容哈希文件名，天然可长缓存）、没有配 `404.html`（单页无路由，不需要）、没有做真实服务器（nginx/Docker）的部署脚本——若以后要迁到自有服务器，`dist/` 三个文件直接指向静态目录即可，注意 `try_files $uri /index.html` 与不要用 `file://` 打开。
 
+## 与合集完全脱钩 + 默认视角改自由视角（2026-10-19）
+
+用户要求「和原有合集完全分开」，并把网页默认视角改成自由视角方便临场查看。两件事一起做了。
+
+### 1. 与 ai-demo 合集彻底分开
+
+合集侧的四处引用**全部还原**到引入本项目之前的状态，没有留下半套联动：
+
+- `index.html`：删掉 RELOOP MRF 的卡片，`meta description` 从「16 个可运行项目」改回 15 个（`git checkout` 还原）。
+- `README.md`：删掉表格行与项目概览段（同上还原）。
+- `tests/recycling-mrf-publication.test.mjs`：删除（它的 4 条断言只服务于合集内那份副本）。
+- `tests/modular-fire-publication.test.mjs`：还原成原来的硬编码列表版本。
+- `docs/github-entry-verification.md`、`package-lock.json`：一并还原。
+- 合集仓库根 `.gitignore` 新增 `/recycling-mrf-digital-twin/`，并在注释里写明它已单独立项与独立仓库地址——本机目录仍留在 `ai-demo/` 下当工作副本，但合集仓库从此看不见它。
+
+结果：合集根 `npm test` 从 203 项降到 **199 项，fail 0**（正好少掉那 4 条 MRF 断言），`git status` 只剩 `.gitignore` 一处改动。
+
+### 2. 默认视角改为自由视角
+
+- `src/App.tsx`：`useState<CameraMode>('overview')` → `'free'`。
+- `src/scene/MrfScene.tsx`：把「按宽高比拉远机位」的 `fit` 逻辑**移到自由视角提前返回之前**。否则默认就是自由视角，手机首次打开会看不到厂房右侧——原先只有俯瞰/跟随才走那段代码。
+- `OrbitControls` 的初始 `target` 由 `[0,0,0]` 改成与「俯瞰全厂」相同的 `OVERVIEW_TARGET = [0, 0.4, -3.2]`，于是自由视角的首帧构图与原来验证过的俯瞰构图完全一致，只是镜头从此交给用户。
+
+数值验收（生产构建，`1440×900`，headless Chrome 154 经 CDP 直连）：
+
+| 对比 | 3D 视口平均像素差 | 峰值 |
+| --- | --- | --- |
+| 同一构建、同状态连拍两次（噪声基线） | **0.000** | 0 |
+| 新默认首帧 vs 旧俯瞰首帧 | 0.889 | 210 |
+| 拖动旋转后 vs 首帧 | **18.123** | 207 |
+| 拖动后再点「俯瞰全厂」vs 首帧 | 0.894 | 210 |
+
+噪声基线为 0 说明这个比对是可信的：**拖动确实改变了画面（18.1），而「俯瞰全厂」能把它拉回原构图（0.894）**。剩下的 0.889/0.894 是亚像素级残差——旧代码里 `control.target` 由 `[0,0,0]` 逐帧 `lerp` 收敛过来，收尾时仍留约 0.14 m 偏离；新代码初始 `target` 就是目标值，所以新首帧比旧首帧更准确地落在设计构图上。
+
+顺带一提：agent-browser 0.25.3 的 CLI 在本次会话中启动浏览器时会挂死（`open` / `connect` 都不返回，连自建 CDP 端口也连不上），但浏览器本体正常，于是改用 Node 内置 `fetch` + `WebSocket` 直连本机 Chrome 的 `--remote-debugging-port=9333`，用 `Page.navigate` / `Runtime.evaluate` / `Page.captureScreenshot` 完成全部验收与截图重拍（临时脚本用后即删）。
+
+同时重拍了两张基线截图：`desktop-01-initial.png`（md5 `8f36763e8e3a015d6f940c0e385fdd71`）、`narrow-01-initial.png`（md5 `aa325b10f8e0137b33d041fa071b097d`）。
+
 ## 未验证项
 
 - 跨浏览器矩阵（Safari / Firefox）与真实触控手势未测；帧率是在 headless Chromium（ANGLE D3D11 / RTX 4070 Laptop）上测的，rAF 不受 vsync 限制，**122–151 FPS 是渲染上限而非屏幕刷新率，不能外推**到真机；显存占用与低端设备表现未测。
