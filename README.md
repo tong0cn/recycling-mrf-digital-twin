@@ -76,7 +76,6 @@ npm run preview -- --host 127.0.0.1 --port 5200 --strictPort
 | --- | --- | --- |
 | 独立仓库 | [github.com/yuhaoxiong/recycling-mrf-digital-twin](https://github.com/yuhaoxiong/recycling-mrf-digital-twin) | 单独立项、对外演示 |
 | 在线站点 | [yuhaoxiong.github.io/recycling-mrf-digital-twin](https://yuhaoxiong.github.io/recycling-mrf-digital-twin/) | 免安装、点开即看（GitHub Pages，HTTPS） |
-| 合集内副本 | ai-demo 仓库的 `recycling-mrf-digital-twin/` | 保留首页卡片与 publication 测试联动 |
 
 发布方式是 GitHub Actions，工作流在 `.github/workflows/deploy.yml`：推到 `main` 后自动 `npm ci` → `npm run build` → `npm test` → 上传 `dist/` → 发布到 Pages。**先构建再测试**，是为了让 `tests/dist.test.ts` 那组「发布产物自包含」断言真正执行——缺 `dist/` 时它们会被静默跳过。
 
@@ -162,6 +161,3 @@ docs/                    复现规格与发布验证记录
 - 看板数字全部为本地仿真值，不接入真实称重、PLC、MES、WMS、ERP 或任何后端服务，也不构成设备选型、产能测算、投资决策或工程验收依据。
 - 浏览器图形上下文中断时会给出等待恢复提示；若初始化失败，设备列表、读数与看板仍可使用。
 
-## 素材与许可
-
-代码沿用上级仓库的 [MIT License](../LICENSE)，第三方依赖遵循各自许可证。项目未使用任何外部图片、模型、字体或音视频素材；所有几何与视觉均由代码生成。视觉风格与界面布局借鉴本合集的 `warehouse-demo` 与 `modular-fire-response`，没有复制其业务代码或模型。
