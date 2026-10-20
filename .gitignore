@@ -4,6 +4,10 @@ node_modules
 .vite
 .DS_Store
 
+# 实际产线的本地 CAD 资产与独立构建，不进入原演示发布。
+/actual-assets/
+/dist-actual/
+
 # TypeScript 增量编译缓存（tsc -b 产生）
 *.tsbuildinfo
 
