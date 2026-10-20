@@ -5,22 +5,22 @@
 - 新入口：`actual.html`；本次本地生产预览为 `http://127.0.0.1:5218/actual.html`。
 - 原入口：`index.html`。原 `src/App.tsx`、`src/simulation/`、`src/scene/`、`src/ui/`、`src/spatial/`、`vite.config.ts`、`dist/` 均不修改。
 - 新源码集中在 `src/actual/`，使用独立的 `ActualSimulation` 与 `vite.actual.config.ts`。
-- 原 `npm run build` 和 GitHub Pages 流程不变，不自动发布实际 CAD 或新动画。
-- 实际 CAD 资产放在忽略目录 `actual-assets/`，新构建输出到忽略目录 `dist-actual/`；本次不上传几何文件。
+- 原 `npm run build` 保留；GitHub Actions 依次构建原演示、新动画，发布合并产物 `dist-actual/`。
+- 在线入口：[实际产线](https://yuhaoxiong.github.io/recycling-mrf-digital-twin/actual.html)、[原演示](https://yuhaoxiong.github.io/recycling-mrf-digital-twin/)。推送 `main` 后自动部署，也可手动触发工作流。
+- 按用户发布要求，仓库仅收录 `actual-assets/plant-review.glb`（约 5.8 MB 的轻量 CAD 网格）；原始 STEP、本地核查资料和其他试验模型不上传。浏览器可下载公开网格。
 
 ## 运行
 
 项目依赖已安装时：
 
 ```powershell
-# 若尚未准备实际模型，复制本地核查阶段的网格（原 STEP 不变）
-New-Item -ItemType Directory -Force actual-assets
-Copy-Item docs/cad-local/plant-review.glb actual-assets/plant-review.glb
+# 轻量 CAD 网格随仓库提供，无需本地 STEP 转换
 
 # 开发：http://127.0.0.1:5217/actual.html
 npm run dev:actual -- --port 5217 --strictPort
 
 # 独立生产构建与预览：http://127.0.0.1:5218/actual.html
+npm run build
 npm run build:actual
 npm run preview:actual -- --port 5218 --strictPort
 ```

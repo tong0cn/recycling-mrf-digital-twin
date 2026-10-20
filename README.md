@@ -4,6 +4,8 @@
 
 [在线演示（GitHub Pages）](https://yuhaoxiong.github.io/recycling-mrf-digital-twin/)  · [完整复现提示](./docs/RECREATE_PROMPT.zh-CN.md) · [发布验证记录](./docs/VALIDATION.md)
 
+[桐乡实际产线运行动画](https://yuhaoxiong.github.io/recycling-mrf-digital-twin/actual.html)：基于实际 CAD 和已确认的 17 台设备工艺，提供独立动画、料仓联锁与共用打包流程。原演示保持独立，详见[实际产线说明](./docs/ACTUAL_ANIMATION.md)。
+
 **这是面向客户的概念演示，不是分选设备的控制或监控系统。** 所有产能、识别率、节拍、吨位都是演示设定；光学分选与高光谱识别不接真实传感器、模型或 PLC / MES / WMS / 称重系统；机械臂抓取是动画概念，不是运动学或抓取力学仿真；叉车按预设航点行驶，没有自动调度、实时避障或碰撞物理。
 
 ## 主生成提示（原文）
