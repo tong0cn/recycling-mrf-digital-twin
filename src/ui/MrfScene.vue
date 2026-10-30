@@ -25,12 +25,42 @@ const emit = defineEmits<{
 const simulation = useSimulation();
 
 const containerRef = ref<HTMLDivElement | null>(null);
+/** 选中设备名称标签：绝对定位于画布之上，每帧按三维锚点投影定位。 */
+const labelRef = ref<HTMLDivElement | null>(null);
 const failed = ref(false);
 const contextLost = ref(false);
 let host: SceneHost | null = null;
 /** 场景各层的句柄：只在 onMounted 里赋值，watch 里安全读取。 */
 let factoryHandle: ReturnType<typeof buildFactory> | null = null;
 let linesHandle: ReturnType<typeof buildLines> | null = null;
+let vehiclesHandle: ReturnType<typeof buildVehicles> | null = null;
+
+/** 标签锚点相对设备锚点的抬升量：让标签浮在设备正上方，而不是压在机器上。 */
+const LABEL_LIFT = 1.9;
+
+/**
+ * 把选中设备的名称标签贴到三维锚点上（等价于 React 版的 drei `<Html center position distanceFactor>`）。
+ * 每帧写一次 style，不经过 Vue 响应式，避免相机拖动时产生组件重渲染。
+ */
+function updateLabelPosition(): void {
+  const element = labelRef.value;
+  if (!element) return;
+  const selected = props.selected;
+  if (!selected || !host) {
+    element.style.display = 'none';
+    return;
+  }
+  const anchor = SceneHost.anchorFor(selected);
+  const projected = host.projectToScreen([anchor[0], anchor[1] + LABEL_LIFT, anchor[2]]);
+  if (!projected.visible) {
+    element.style.display = 'none';
+    return;
+  }
+  element.style.display = 'block';
+  element.style.left = `${projected.x}px`;
+  element.style.top = `${projected.y}px`;
+  element.style.transform = `translate(-50%, -50%) scale(${projected.scale.toFixed(3)})`;
+}
 
 const CAMERA_LABEL: Record<CameraMode, string> = {
   overview: '俯瞰全厂',
@@ -63,9 +93,11 @@ onMounted(() => {
     ];
     factoryHandle = factory;
     linesHandle = lines;
+    vehiclesHandle = vehicles;
 
     factory.setXray(props.viewMode === 'xray');
     lines.setSelected(props.selected);
+    vehicles.setSelected(props.selected);
     lines.setViewMode(props.viewMode);
     host.setCameraMode(props.cameraMode);
     host.setReducedMotion(props.reducedMotion);
@@ -76,6 +108,8 @@ onMounted(() => {
       lines.update({ state, timeInShift: simulation.timeInShift, reducedMotion: activeHost.isReducedMotion });
       vehicles.update(state, activeHost.isReducedMotion);
       for (const puff of puffs) puff.update(state, activeHost.isReducedMotion, delta);
+      // 标签跟随相机：自由视角拖动时也要一直贴在设备上方。
+      updateLabelPosition();
     });
     activeHost.start();
   } catch (error) {
@@ -89,6 +123,7 @@ onBeforeUnmount(() => {
   host = null;
   factoryHandle = null;
   linesHandle = null;
+  vehiclesHandle = null;
 });
 
 watch(
@@ -103,8 +138,11 @@ watch(
   () => props.selected,
   (selected) => {
     linesHandle?.setSelected(selected);
+    vehiclesHandle?.setSelected(selected);
     host?.setFocusTarget(selected ? SceneHost.anchorFor(selected) : null);
     if (selected && props.cameraMode === 'focus') host?.setCameraMode('focus');
+    // 选中态变化后立即摆一次标签，不必等下一帧。
+    updateLabelPosition();
   },
 );
 
@@ -122,8 +160,7 @@ watch(
 );
 
 /** 选中设备的悬浮名称标签（HTML overlay，跟随三维位置）。 */
-const selectedLabel = () => (props.selected ? DEVICE_SPEC_BY_ID[props.selected].name : '');
-</script>
+const selectedLabel = () => (props.selected ? DEVICE_SPEC_BY_ID[props.selected].name : '');</script>
 
 <template>
   <div class="scene-root">
@@ -154,7 +191,8 @@ const selectedLabel = () => (props.selected ? DEVICE_SPEC_BY_ID[props.selected].
       <span><i :style="{ background: MATERIAL_META.MISC.color }" />杂项</span>
     </div>
 
-    <div v-if="props.selected" class="device-label" aria-live="polite">{{ selectedLabel() }}</div>
+    <!-- 选中设备名称：绝对定位在画布之上，由 updateLabelPosition() 每帧按三维锚点投影摆放。 -->
+    <div ref="labelRef" class="device-label" aria-live="polite">{{ selectedLabel() }}</div>
 
     <div v-if="contextLost" class="scene-overlay" role="status">
       <p>

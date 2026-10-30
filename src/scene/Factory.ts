@@ -17,6 +17,8 @@ export interface FloatingLabel {
 export interface FactoryHandle {
   /** 屋顶与墙面细节分组：透视模式（xray）下整体隐藏。 */
   roofDetails: Object3D;
+  /** 四面墙板的材质：透视时淡出，实体时恢复不透明。 */
+  wallMaterials: MeshStandardMaterial[];
   /** 只在透视模式下显示的 HTML 标签。 */
   labels: FloatingLabel[];
   setXray(xray: boolean): void;
@@ -198,9 +200,16 @@ export function buildFactory(parent: Object3D): FactoryHandle {
       });
     }
     // 地面分区名：像真实车间一样刷在地上
+    const zoneTexture = zoneMap(zone.label);
     mesh(zoneNode, {
       geometry: plane(zone.w * 0.62, zone.w * 0.19),
-      material: standard({ map: zoneMap(zone.label) ?? undefined, transparent: true, opacity: 0.72, roughness: 0.9, depthWrite: false }),
+      material: standard({
+        ...(zoneTexture ? { map: zoneTexture } : {}),
+        transparent: true,
+        opacity: 0.72,
+        roughness: 0.9,
+        depthWrite: false,
+      }),
       position: [0, 0.024, -zone.d / 2 + 0.75],
       rotation: [-Math.PI / 2, 0, 0],
       receiveShadow: false,
@@ -241,7 +250,9 @@ export function buildFactory(parent: Object3D): FactoryHandle {
       transparent: true,
       opacity: 0.96,
       side: DoubleSide,
-      map: map ?? undefined,
+      // 贴图在无 2D 上下文时（jsdom）会返回 null；这里只在真的有贴图时才带上 map，
+      // 避免向 three 传 `map: undefined`（会在控制台刷出 Material 参数告警）。
+      ...(map ? { map } : {}),
     });
     mesh(root, { geometry: new BoxGeometry(size[0], size[1], size[2]), material, position });
     wallMaterials.push(material);
@@ -322,7 +333,7 @@ export function buildFactory(parent: Object3D): FactoryHandle {
   slab(signNode, [9.6, 1.6, 0.1], { radius: 0.04, color: PALETTE.panelFace, kind: 'plastic', castShadow: false });
   mesh(signNode, {
     geometry: plane(8.6, 1.05),
-    material: standard({ map: signMap ?? undefined, transparent: true, roughness: 0.6, toneMapped: false }),
+    material: standard({ ...(signMap ? { map: signMap } : {}), transparent: true, roughness: 0.6, toneMapped: false }),
     position: [0, 0, 0.07],
   });
 
@@ -396,14 +407,22 @@ export function buildFactory(parent: Object3D): FactoryHandle {
   louver(root, { width: 2.2, height: 1.0, slats: 6, position: [FACTORY.minX + 0.16, 4.4, centerZ - 4], rotation: [0, Math.PI / 2, 0] });
   louver(root, { width: 2.2, height: 1.0, slats: 6, position: [FACTORY.maxX - 0.16, 4.4, centerZ + 3], rotation: [0, -Math.PI / 2, 0] });
 
-  let currentXray = true;
+  /*
+   * 上一次应用过的透视状态。初始为 null 而不是 true：
+   * 场景构建出来时屋顶细节默认可见、墙板不透明，等价于「显示屋顶」(enclosed)；
+   * 若这里初始化成 true，挂载时视图模式本就是 xray，`setXray(true)` 会命中早退守卫直接返回，
+   * 屋顶就永远收不起来，与顶栏按钮文案（依 viewMode 显示「显示屋顶」）互相矛盾。
+   * 用 null 表示「尚未应用过任何状态」，保证首次调用一定生效。
+   */
+  let appliedXray: boolean | null = null;
 
   return {
     roofDetails,
+    wallMaterials,
     labels,
     setXray(xray: boolean) {
-      if (xray === currentXray) return;
-      currentXray = xray;
+      if (xray === appliedXray) return;
+      appliedXray = xray;
       roofDetails.visible = !xray;
       for (const material of wallMaterials) material.opacity = xray ? 0.14 : 0.96;
     },

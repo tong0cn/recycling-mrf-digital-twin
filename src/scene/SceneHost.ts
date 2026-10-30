@@ -14,7 +14,6 @@ import {
   Vector2,
   Vector3,
   WebGLRenderer,
-  type Object3D,
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { PMREMGenerator } from 'three';
@@ -23,14 +22,16 @@ import type { CameraMode, DeviceId } from '../types';
 import { PLANT } from '../spatial/layout';
 import { PALETTE } from './palette';
 import { DEVICE_ANCHORS, FOCUS_OFFSET } from './anchors';
+import { projectToViewport, type ProjectedPoint } from './projection';
+import { pickDevice, toNdc } from './picking';
 
 export const OVERVIEW_POSITION = { x: 37, y: 32, z: 43 };
 /** 全厂取景的视点（厂房中心略向南偏，园区前场也算画面的一部分）。 */
 export const OVERVIEW_TARGET: [number, number, number] = [0, 0.4, -3.2];
 const OVERVIEW_VECTOR = new Vector3(OVERVIEW_POSITION.x, OVERVIEW_POSITION.y, OVERVIEW_POSITION.z);
 
-/** 场景里可点选的设备：把网格上溯到最近的这个标记。 */
-const PICKABLE = 'userData.deviceId';
+/** 场景里可点选的设备：把网格上溯到最近的标记，见 `picking.ts`。 */
+const CLICK_TOLERANCE = 4;
 
 export interface SceneCallbacks {
   onSelect: (id: DeviceId | null) => void;
@@ -43,6 +44,7 @@ export interface FrameContext {
   delta: number;
   elapsed: number;
 }
+
 
 type FrameHook = (context: FrameContext) => void;
 
@@ -70,7 +72,6 @@ export class SceneHost {
   private readonly callbacks: SceneCallbacks;
   private readonly hooks: FrameHook[] = [];
   private readonly raycaster = new Raycaster();
-  private readonly pointer = new Vector2();
   private readonly clock = { last: 0, elapsed: 0 };
   private frameHandle = 0;
   private disposed = false;
@@ -122,6 +123,7 @@ export class SceneHost {
     this.setupLights();
     this.setupEnvironment();
 
+    this.renderer.domElement.addEventListener('pointerdown', this.onPointerDown);
     this.renderer.domElement.addEventListener('click', this.onClick);
     this.renderer.domElement.addEventListener('pointermove', this.onPointerMove);
 
@@ -234,6 +236,15 @@ export class SceneHost {
     return this.reducedMotion;
   }
 
+  /**
+   * 把世界坐标投影成画布内的像素位置，供 HTML 浮层（如选中设备的名称标签）跟随三维物体。
+   * 数学部分见 `projection.ts`（纯函数，可直接单测）。
+   */
+  projectToScreen(position: readonly [number, number, number], distanceFactor = 22): ProjectedPoint {
+    const canvas = this.renderer.domElement;
+    return projectToViewport(position, this.camera, canvas.clientWidth, canvas.clientHeight, distanceFactor);
+  }
+
   private updateCamera(delta: number): void {
     const { camera, controls } = this;
     const size = this.renderer.getSize(new Vector2());
@@ -280,37 +291,32 @@ export class SceneHost {
 
   /* ---------------- 拾取 ---------------- */
 
+  /**
+   * 按下位置。拖动旋转 / 缩放也会在画布上触发 `click`，
+   * 只有「按下与抬起几乎同一点」才算点选，否则转个镜头就误选中设备。
+   */
+  private pointerDownAt: { x: number; y: number } | null = null;
+
+  private onPointerDown = (event: PointerEvent): void => {
+    this.pointerDownAt = { x: event.clientX, y: event.clientY };
+  };
+
   private onClick = (event: MouseEvent): void => {
-    const device = this.pick(event);
+    const down = this.pointerDownAt;
+    this.pointerDownAt = null;
+    if (down && Math.hypot(event.clientX - down.x, event.clientY - down.y) > CLICK_TOLERANCE) return;
     // 点到空白处取消选中，与 React 版的 onBackground 行为一致。
-    this.callbacks.onSelect(device);
+    this.callbacks.onSelect(this.pick(event));
   };
 
   private onPointerMove = (event: PointerEvent): void => {
-    const device = this.pick(event);
-    this.renderer.domElement.style.cursor = device ? 'pointer' : '';
+    this.renderer.domElement.style.cursor = this.pick(event) ? 'pointer' : '';
   };
 
   private pick(event: MouseEvent): DeviceId | null {
     const rect = this.renderer.domElement.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return null;
-    this.pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
-    this.raycaster.setFromCamera(this.pointer, this.camera);
-    const hits = this.raycaster.intersectObject(this.root, true);
-    for (const hit of hits) {
-      let node: Object3D | null = hit.object;
-      while (node) {
-        const id = (node.userData as Record<string, unknown>)[PICKABLE] as DeviceId | undefined;
-        if (id) return id;
-        node = node.parent;
-      }
-    }
-    return null;
-  }
-
-  /** 给设备外壳根节点打上可点选标记。 */
-  static markPickable(node: Object3D, id: DeviceId): void {
-    node.userData[PICKABLE] = id;
+    return pickDevice(this.root, this.camera, toNdc(event.clientX, event.clientY, rect), this.raycaster);
   }
 
   /* ---------------- 尺寸与生命周期 ---------------- */
@@ -355,6 +361,7 @@ export class SceneHost {
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     window.removeEventListener('resize', this.resize);
+    this.renderer.domElement.removeEventListener('pointerdown', this.onPointerDown);
     this.renderer.domElement.removeEventListener('click', this.onClick);
     this.renderer.domElement.removeEventListener('pointermove', this.onPointerMove);
     this.renderer.domElement.removeEventListener('webglcontextlost', this.onContextLost);

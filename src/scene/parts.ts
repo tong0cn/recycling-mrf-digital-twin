@@ -2,6 +2,7 @@ import { Mesh, MeshBasicMaterial, type Group, type Object3D } from 'three';
 import type { DeviceId, Point } from '../types';
 import { dist } from '../spatial/layout';
 import { box, group, mesh, type Vec3 } from './three';
+import { markDevice } from './picking';
 
 export interface BeltMeshGeometry {
   position: [number, number, number];
@@ -49,7 +50,8 @@ export function deviceShell(
   },
 ): DeviceShellHandle {
   const node = group(parent, options.position);
-  node.userData.deviceId = options.device;
+  // 与 picking.ts 共用同一个键：写在这里、读在 resolveDeviceId()，不允许各写各的字符串。
+  markDevice(node, options.device);
   options.build?.(node);
 
   const highlight = mesh(node, {

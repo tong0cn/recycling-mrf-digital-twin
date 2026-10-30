@@ -6,7 +6,7 @@ import { bar, boltRow, pipe, rod, slab } from './kit';
 import { box, cylinder, group, mesh, sphere, standard } from './three';
 import { glow, surface } from './materials';
 import { PALETTE } from './palette';
-import { deviceShell } from './parts';
+import { deviceShell, type DeviceShellHandle } from './parts';
 import { balePose, unitPose, type Pose } from './unitPositions';
 
 const TRUCK_DEVICE: Record<TruckId, DeviceId> = {
@@ -57,7 +57,7 @@ function buildWheel(parent: Object3D, options: { position: [number, number, numb
 }
 
 /** 厢式货车：驾驶室 + 导流罩 + 车厢（带波纹肋与后门）+ 底盘 + 六轮 + 灯组。 */
-function buildTruck(parent: Object3D, id: TruckId): Group {
+function buildTruck(parent: Object3D, id: TruckId): { root: Group; shell: DeviceShellHandle } {
   const root = group(parent);
   const shell = deviceShell(root, { device: TRUCK_DEVICE[id], size: [2.6, 3.6, 9] });
   const node = shell.node;
@@ -132,11 +132,14 @@ function buildTruck(parent: Object3D, id: TruckId): Group {
   }
   // 车轮
   for (const position of WHEEL_POSITIONS) buildWheel(node, { position });
-  return root;
+  return { root, shell };
 }
 
 /** 叉车：车身 + 配重 + 座椅/方向盘 + 护顶架 + 门架与货叉 + 警示灯。 */
-function buildForklift(parent: Object3D, id: 'FL1' | 'FL2'): { root: Group; mast: Group; cargoBlock: Group; indicator: Mesh } {
+function buildForklift(
+  parent: Object3D,
+  id: 'FL1' | 'FL2',
+): { root: Group; shell: DeviceShellHandle; mast: Group; cargoBlock: Group; indicator: Mesh } {
   const root = group(parent);
   const shell = deviceShell(root, { device: FORKLIFT_DEVICE[id], size: [1.6, 2.7, 3.2] });
   const node = shell.node;
@@ -199,7 +202,7 @@ function buildForklift(parent: Object3D, id: 'FL1' | 'FL2'): { root: Group; mast
     position: [0, 2.78, -0.75],
     castShadow: false,
   });
-  return { root, mast, cargoBlock, indicator };
+  return { root, shell, mast, cargoBlock, indicator };
 }
 
 /** 打包块（主体 + 捆扎带）与移动中的物料包：按仿真 ID 动态增删网格。 */
@@ -214,7 +217,7 @@ function buildForklift(parent: Object3D, id: 'FL1' | 'FL2'): { root: Group; mast
 export function buildVehicles(parent: Object3D): VehiclesHandle {
   const root = group(parent);
 
-  const trucks = (['TRUCK_A', 'TRUCK_B', 'TRUCK_C'] as TruckId[]).map((id) => ({ id, node: buildTruck(root, id) }));
+  const trucks = (['TRUCK_A', 'TRUCK_B', 'TRUCK_C'] as TruckId[]).map((id) => ({ id, ...buildTruck(root, id) }));
   const forklifts = (['FL1', 'FL2'] as const).map((id) => ({ id, ...buildForklift(root, id) }));
 
   // 打包块主体
@@ -278,8 +281,8 @@ export function buildVehicles(parent: Object3D): VehiclesHandle {
       // 货车：在门外等待时就不画。
       for (const truck of trucks) {
         const record = state.trucks[truck.id];
-        truck.node.visible = record.status !== 'OFF_SITE';
-        truck.node.position.set(record.x, 0, record.z);
+        truck.root.visible = record.status !== 'OFF_SITE';
+        truck.root.position.set(record.x, 0, record.z);
       }
       // 叉车：车头朝行进方向，门架随装卸高度升降。
       for (const forklift of forklifts) {
@@ -333,9 +336,9 @@ export function buildVehicles(parent: Object3D): VehiclesHandle {
       }
     },
     setSelected(selected: DeviceId | null) {
-      // 外壳列表在构建时已打上拾取标记；高亮由 Lines 的同名机制负责，
-      // 车辆这里只需保证选中态在列表被重建时不丢失（当前外壳一次性建好，留作扩展点）。
-      void selected;
+      // 每辆车/叉车都有自己的 DeviceShell，选中时显示包围盒描边（与设备外壳同一套机制）。
+      for (const truck of trucks) truck.shell.setSelected(TRUCK_DEVICE[truck.id] === selected);
+      for (const forklift of forklifts) forklift.shell.setSelected(FORKLIFT_DEVICE[forklift.id] === selected);
     },
     dispose() {
       root.traverse((node) => {
